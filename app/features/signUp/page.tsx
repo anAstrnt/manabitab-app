@@ -1,12 +1,11 @@
 "use client";
 
 import * as React from "react";
+// UIに関するインポート
 import Avatar from "@mui/material/Avatar";
 import Button from "@mui/material/Button";
 import CssBaseline from "@mui/material/CssBaseline";
 import TextField from "@mui/material/TextField";
-import FormControlLabel from "@mui/material/FormControlLabel";
-import Checkbox from "@mui/material/Checkbox";
 import Link from "@mui/material/Link";
 import Grid from "@mui/material/Grid";
 import Box from "@mui/material/Box";
@@ -14,17 +13,73 @@ import LockOutlinedIcon from "@mui/icons-material/LockOutlined";
 import Typography from "@mui/material/Typography";
 import Container from "@mui/material/Container";
 import { createTheme, ThemeProvider } from "@mui/material/styles";
+// ユーザー認証に関するインポート
+import { createUserWithEmailAndPassword } from "firebase/auth";
+import { auth, db } from "@/libs/firebase";
+import { addDoc, collection, doc, setDoc } from "firebase/firestore";
 
 const defaultTheme = createTheme();
 
 const page = () => {
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+  const [userName, setUserName] = React.useState("");
+  const [email, setEmail] = React.useState("");
+  const [password, setPassword] = React.useState("");
+
+  const handleSubmitSignIn = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const data = new FormData(event.currentTarget);
-    console.log({
-      email: data.get("email"),
-      password: data.get("password"),
+
+    // const data = new FormData(event.currentTarget);
+    // const userName = data.get("yourName")?.toString;
+    // const email = data.get("email")?.toString;
+    // const password = data.get("password")?.toString;
+
+    // if (userName) {
+    //   setErrorUserName("ユーザー名を入力してください。");
+    // }
+    // if (email) {
+    //   setErrorEmail("メールアドレスを入力してください。");
+    // }
+    // if (password) {
+    //   setErrorPassword("パスワードを入力してください。");
+    // }
+
+    await addDoc(collection(db, "users"), {
+      name: userName,
+      email: email,
+      password: password,
     });
+
+    await createUserWithEmailAndPassword(auth, email, password)
+      .then((userCredential) => {
+        // Signed in
+        const user = userCredential.user;
+        console.log(user);
+      })
+      .catch((error) => {
+        const errorCode = error.code;
+        // const errorMessage = error.message;
+        console.log({ code: errorCode });
+
+        switch (errorCode) {
+          case "auth/missing-email":
+            console.log("メールアドレスを入力してください。");
+            break;
+          case "auth/email-already-in-use":
+            console.log("入力されたメールアドレスはすでに使用されています。");
+            break;
+          case "auth/invalid-email":
+            console.log(
+              "入力されたメールアドレスは無効です。正しいメールアドレスを入力してください。"
+            );
+            break;
+          case "auth/missing-password":
+            console.log("パスワードを入力してください。");
+            break;
+          case "auth/weak-password":
+            console.log("パスワードは６文字以上で入力してください。");
+            break;
+        }
+      });
   };
 
   return (
@@ -45,10 +100,12 @@ const page = () => {
           <Typography component="h1" variant="h5">
             Sign up
           </Typography>
-          <Box component="form" noValidate onSubmit={handleSubmit} sx={{ mt: 3 }}>
+          <Box component="form" noValidate onSubmit={handleSubmitSignIn} sx={{ mt: 3 }}>
             <Grid container spacing={2}>
               <Grid item xs={12}>
                 <TextField
+                  onChange={(e) => setUserName(e.target.value)}
+                  value={userName}
                   autoComplete="given-name"
                   name="yourName"
                   required
@@ -58,18 +115,10 @@ const page = () => {
                   autoFocus
                 />
               </Grid>
-              {/* <Grid item xs={12} sm={6}>
-                <TextField
-                  required
-                  fullWidth
-                  id="lastName"
-                  label="Last Name"
-                  name="lastName"
-                  autoComplete="family-name"
-                />
-              </Grid> */}
               <Grid item xs={12}>
                 <TextField
+                  onChange={(e) => setEmail(e.target.value)}
+                  value={email}
                   required
                   fullWidth
                   id="email"
@@ -80,6 +129,8 @@ const page = () => {
               </Grid>
               <Grid item xs={12}>
                 <TextField
+                  onChange={(e) => setPassword(e.target.value)}
+                  value={password}
                   required
                   fullWidth
                   name="password"
@@ -89,14 +140,16 @@ const page = () => {
                   autoComplete="new-password"
                 />
               </Grid>
-              {/* <Grid item xs={12}>
-                <FormControlLabel
-                  control={<Checkbox value="allowExtraEmails" color="primary" />}
-                  label="I want to receive inspiration, marketing promotions and updates via email."
-                />
-              </Grid> */}
             </Grid>
-            <Button type="submit" fullWidth variant="contained" sx={{ mt: 3, mb: 2 }}>
+            <Button
+              disabled={
+                !userName || !email || !password || password.length < 6 ? true : false
+              }
+              type="submit"
+              fullWidth
+              variant="contained"
+              sx={{ mt: 3, mb: 2 }}
+            >
               Sign Up
             </Button>
             <Grid container justifyContent="flex-end">
